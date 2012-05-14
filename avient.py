@@ -40,6 +40,8 @@ def parseSchedule(doc):
             'pcs': int(cells[4].text.strip()),
             'pallets': cells[5].text.strip()
         })
+
+    schedule.reverse() # return the list in a reversed order
     return schedule
 
 
