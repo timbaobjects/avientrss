@@ -1,4 +1,4 @@
-import requests
+import mechanize as mc
 from bs4 import BeautifulSoup
 from datetime import datetime
 from flask import Flask, make_response
@@ -6,27 +6,30 @@ import PyRSS2Gen
 import os
 
 URI = 'https://zeus.avient.aero/trackandtrace.aspx'
+browser = mc.Browser()
+browser.set_handle_robots(False)
 
 
 def retrievePage(awb_prefix, awb_number):
-    payload = {
-        'TextBox1': awb_prefix,
-        'TextBox2': awb_number,
-        'Button1': 'Track and Trace',
-        '__EVENTVALIDATION': '/wEWBALbm8qqCwLs0bLrBgLs0fbZDAKM54rGBoU3gPiyt+gyP37IknYl6tMjxOpp',
-        '__VIEWSTATE': '/wEPDwUJNzQwMzI3OTUwD2QWAgIDD2QWAgIPDzwrAA0AZBgBBQlHcmlkVmlldzEPZ2QWHTsBCfKToIb33Zc5OTKlTn+7zA=='
-    }
-    headers = {
-        'referer': 'https://zeus.avient.aero/trackandtrace.aspx'
-    }
+    '''
+    Retrieve the web document containing the tracking information
+    '''
     try:
-        response = requests.post("https://zeus.avient.aero/trackandtrace.aspx", data=payload, headers=headers)
+        browser.open(URI)
+        browser.select_form("form1")
+        browser.form['TextBox1'] = str(awb_prefix)
+        browser.form['TextBox2'] = str(awb_number)
+        response = browser.submit().read()
+        return response
     except Exception:
-        pass
-    return response
+        return ""
 
 
 def parseSchedule(doc):
+    '''
+    Parse the document containing the tracking information into
+    a structured format
+    '''
     soup = BeautifulSoup(doc)
     schedule = []
 
@@ -46,6 +49,9 @@ def parseSchedule(doc):
 
 
 def generateRss(schedule):
+    '''
+    Takes the structured shipping schedule and generates an RSS feed from it
+    '''
     rss = PyRSS2Gen.RSS2(
         title="Avient Track and Trace",
         link=URI,
@@ -72,7 +78,7 @@ def smile():
 
 @app.route("/rss/<int:awb_prefix>/<int:awb_number>")
 def avient_rss(awb_prefix, awb_number):
-    rss = generateRss(parseSchedule(retrievePage(awb_prefix, awb_number).text))
+    rss = generateRss(parseSchedule(retrievePage(awb_prefix, awb_number)))
     response = make_response(rss, 200)
     response.headers['Content-Type'] = 'application/rss+xml; charset=utf-8'
     return response
