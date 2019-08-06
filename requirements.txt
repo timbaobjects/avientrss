@@ -1,4 +1,4 @@
-Flask==0.8
+Flask==1.0
 PyRSS2Gen==1.0.0
 beautifulsoup4==4.0.2
 mechanize==0.2.5
